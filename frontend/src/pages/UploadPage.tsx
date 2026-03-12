@@ -37,17 +37,22 @@ export default function UploadPage() {
       <div style={styles.card}>
         <p style={styles.hint}>
           請上傳 Excel 檔案，欄位順序：<br />
-          <strong>A: 品號　B: 對照號　C: 品名　E: 單箱數量</strong><br />
+          <strong>A: 品號　B: 對照號　C: 品名　D: 單箱數量</strong><br />
           （第一列為標題，自動略過）
         </p>
 
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".xlsx,.xls"
-          onChange={handleFileChange}
-          style={styles.fileInput}
-        />
+        <div style={styles.fileRow}>
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={handleFileChange}
+            style={styles.fileInput}
+          />
+          <a href="/上傳範本.xlsx" download="上傳範本.xlsx" style={styles.templateBtn}>
+            下載上傳範本
+          </a>
+        </div>
 
         {file && (
           <div style={styles.fileInfo}>
@@ -95,7 +100,12 @@ const styles: Record<string, React.CSSProperties> = {
     background: '#eaf4fb', padding: '12px 16px', borderRadius: 6,
     fontSize: 14, lineHeight: 1.8, color: '#333', margin: 0,
   },
+  fileRow: { display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
   fileInput: { fontSize: 14 },
+  templateBtn: {
+    padding: '5px 12px', background: '#27ae60', color: '#fff',
+    borderRadius: 4, fontSize: 13, textDecoration: 'none', whiteSpace: 'nowrap',
+  },
   fileInfo: { fontSize: 13, color: '#555' },
   error: { background: '#fdecea', color: '#c0392b', padding: '8px 12px', borderRadius: 4, fontSize: 14 },
   btn: {

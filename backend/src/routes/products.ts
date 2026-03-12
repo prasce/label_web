@@ -47,7 +47,7 @@ export default async function productRoutes(app: FastifyInstance) {
           品號:     row.getCell(1).text.trim(),
           對照號:   row.getCell(2).text.trim(),
           品名:     row.getCell(3).text.trim(),
-          單箱數量: Number(row.getCell(5).value) || null,
+          單箱數量: Number(row.getCell(4).value) || null,
         });
       });
 

@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { TabProvider } from './contexts/TabContext';
 import Navbar from './components/Navbar';
+import TabBar from './components/TabBar';
 import PrivateRoute from './components/PrivateRoute';
 import LoginPage from './pages/LoginPage';
 import IndexPage from './pages/IndexPage';
@@ -16,8 +18,9 @@ export default function App() {
           path="/*"
           element={
             <PrivateRoute>
-              <>
+              <TabProvider>
                 <Navbar />
+                <TabBar />
                 <Routes>
                   <Route path="/" element={<IndexPage />} />
                   <Route path="/print" element={<PrintLabelPage />} />
@@ -25,7 +28,7 @@ export default function App() {
                   <Route path="/records" element={<PrintRecordsPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
-              </>
+              </TabProvider>
             </PrivateRoute>
           }
         />
