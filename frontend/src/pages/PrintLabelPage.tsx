@@ -26,7 +26,6 @@ interface LabelData {
   isPartial: boolean;
 }
 
-
 function calcLabels(form: FormState): LabelData[] {
   const qty = Number(form.總進貨數量);
   const box = Number(form.單箱數量);
@@ -48,7 +47,6 @@ function LabelPage({ form, label }: { form: FormState; label: LabelData }) {
     <div className="label-page">
       <table className="label-table">
         <tbody>
-          {/* Row 1: 品號 / 品名 */}
           <tr>
             <td className="label-cell label-cell-left">
               <span className="label-field-name">日翊品號：</span>
@@ -59,8 +57,6 @@ function LabelPage({ form, label }: { form: FormState; label: LabelData }) {
               <span className="label-value">{form.品名}</span>
             </td>
           </tr>
-
-          {/* Row 2: 單箱入數 / 總進貨數（帶入總進貨數量） */}
           <tr>
             <td className="label-cell label-cell-left">
               <span className="label-field-name">商品單箱入數：</span>
@@ -71,8 +67,6 @@ function LabelPage({ form, label }: { form: FormState; label: LabelData }) {
               <span className="label-value">{form.總進貨數量}</span>
             </td>
           </tr>
-
-          {/* Row 3: 備註（散貨箱警示） */}
           <tr>
             <td className="label-cell label-cell-remark" colSpan={2}>
               <div className="label-remark-line">
@@ -85,8 +79,6 @@ function LabelPage({ form, label }: { form: FormState; label: LabelData }) {
               )}
             </td>
           </tr>
-
-          {/* Row 4: 日期 */}
           <tr>
             <td className="label-cell label-cell-dates" colSpan={2}>
               <div className="label-dates-row">
@@ -105,8 +97,6 @@ function LabelPage({ form, label }: { form: FormState; label: LabelData }) {
               </div>
             </td>
           </tr>
-
-          {/* Row 5: 三擇二提示（置中） */}
           <tr>
             <td className="label-cell label-cell-hint" colSpan={2}>
               （三擇二填寫）
@@ -128,10 +118,7 @@ export default function PrintLabelPage() {
   const 總進貨數量Ref = useRef<HTMLInputElement>(null);
   const dateRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  function handleEnterTab(
-    e: React.KeyboardEvent<HTMLInputElement>,
-    next: () => void
-  ) {
+  function handleEnterTab(e: React.KeyboardEvent<HTMLInputElement>, next: () => void) {
     if (e.key === 'Enter' || e.key === 'Tab') {
       e.preventDefault();
       next();
@@ -171,9 +158,7 @@ export default function PrintLabelPage() {
       if (form[field] && !isValidYYYYMMDD(form[field]))
         e[field] = '格式須為 yyyymmdd（例：20260101）';
     });
-    const validDateCount = dateFields.filter(
-      (f) => form[f] && isValidYYYYMMDD(form[f])
-    ).length;
+    const validDateCount = dateFields.filter((f) => form[f] && isValidYYYYMMDD(form[f])).length;
     if (validDateCount < 2)
       e.製造日期 = (e.製造日期 ? e.製造日期 + '；' : '') + '製造日期／有效日期／保存期限至少填寫兩項';
     setErrors(e);
@@ -203,6 +188,7 @@ export default function PrintLabelPage() {
   }
 
   const labels = calcLabels(form);
+  const readonlyInput = { ...styles.input, background: '#f5f5f5', color: '#888' };
 
   return (
     <>
@@ -220,125 +206,198 @@ export default function PrintLabelPage() {
         <h2 style={styles.title}>列印標籤</h2>
         <div style={styles.card}>
 
-          {/* 品號 */}
-          <Row label="品號 *">
-            <input
-              style={styles.input}
-              value={form.品號}
-              onChange={(e) => setForm((f) => ({ ...f, 品號: e.target.value }))}
-              onBlur={handleProductLookup}
-              onKeyDown={(e) => handleEnterTab(e, () => {
-                handleProductLookup();
-                總進貨數量Ref.current?.focus();
-              })}
-              placeholder="輸入後離開欄位自動回查"
-            />
-            {lookupMsg && <small style={{ color: lookupMsg.startsWith('✓') ? 'green' : '#e67e22' }}>{lookupMsg}</small>}
-            {errors.品號 && <Err msg={errors.品號} />}
-          </Row>
-
-          {/* 對照號 */}
-          <Row label="對照號">
-            <input style={{ ...styles.input, background: '#f5f5f5' }} value={form.對照號} readOnly tabIndex={-1} />
-          </Row>
-
-          {/* 品名 */}
-          <Row label="品名">
-            <input style={{ ...styles.input, background: '#f5f5f5' }} value={form.品名} readOnly tabIndex={-1} />
-          </Row>
-
-          {/* 單箱數量 */}
-          <Row label="單箱數量">
-            <input style={{ ...styles.input, background: '#f5f5f5' }} value={form.單箱數量} readOnly tabIndex={-1} />
-          </Row>
-
-          {/* 總進貨數量 */}
-          <Row label="總進貨數量 *">
-            <input
-              ref={總進貨數量Ref}
-              style={styles.input}
-              type="number"
-              min={1}
-              value={form.總進貨數量}
-              onChange={(e) => setForm((f) => ({ ...f, 總進貨數量: e.target.value }))}
-              onKeyDown={(e) => handleEnterTab(e, () => dateRefs.current['製造日期']?.focus())}
-            />
-            {errors.總進貨數量 && <Err msg={errors.總進貨數量} />}
-          </Row>
-
-          {/* 總箱數（唯讀） */}
-          <Row label="總箱數">
-            <input style={{ ...styles.input, background: '#f5f5f5', fontWeight: 600 }} value={總箱數} readOnly tabIndex={-1} />
-            <small style={{ color: '#888' }}>系統計算（總進貨數量 ÷ 單箱數量）</small>
-          </Row>
-
-          {/* 日期三欄 */}
-          {(['製造日期', '有效日期', '保存期限'] as const).map((field, idx, arr) => (
-            <Row key={field} label={field}>
+          {/* Row 1: 品號 + 對照號 */}
+          <div style={styles.grid2}>
+            <div style={styles.field}>
+              <label style={styles.label}>品號 *</label>
               <input
-                ref={(el) => { dateRefs.current[field] = el; }}
-                style={styles.input}
-                value={form[field]}
-                maxLength={8}
-                placeholder="yyyymmdd"
-                onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
-                onKeyDown={(e) => {
-                  const next = arr[idx + 1];
-                  if (next) handleEnterTab(e, () => dateRefs.current[next]?.focus());
-                }}
+                style={errors.品號 ? { ...styles.input, borderColor: '#e74c3c' } : styles.input}
+                value={form.品號}
+                onChange={(e) => setForm((f) => ({ ...f, 品號: e.target.value }))}
+                onBlur={handleProductLookup}
+                onKeyDown={(e) => handleEnterTab(e, () => {
+                  handleProductLookup();
+                  總進貨數量Ref.current?.focus();
+                })}
+                placeholder="輸入後離開欄位自動回查"
               />
-              {errors[field] && <Err msg={errors[field]!} />}
-            </Row>
-          ))}
+              {lookupMsg && (
+                <small style={{ color: lookupMsg.startsWith('✓') ? '#16a34a' : '#e67e22', marginTop: 3 }}>
+                  {lookupMsg}
+                </small>
+              )}
+              {errors.品號 && <small style={styles.errText}>{errors.品號}</small>}
+            </div>
+
+            <div style={styles.field}>
+              <label style={styles.label}>對照號</label>
+              <input style={readonlyInput} value={form.對照號} readOnly tabIndex={-1} />
+            </div>
+          </div>
+
+          {/* Row 2: 品名 + 單箱數量 */}
+          <div style={styles.grid2}>
+            <div style={styles.field}>
+              <label style={styles.label}>品名</label>
+              <input style={readonlyInput} value={form.品名} readOnly tabIndex={-1} />
+            </div>
+
+            <div style={styles.field}>
+              <label style={styles.label}>單箱數量</label>
+              <input style={readonlyInput} value={form.單箱數量} readOnly tabIndex={-1} />
+            </div>
+          </div>
+
+          {/* Row 3: 總進貨數量 + 總箱數 */}
+          <div style={styles.grid2}>
+            <div style={styles.field}>
+              <label style={styles.label}>總進貨數量 *</label>
+              <input
+                ref={總進貨數量Ref}
+                style={errors.總進貨數量 ? { ...styles.input, borderColor: '#e74c3c' } : styles.input}
+                type="number"
+                min={1}
+                value={form.總進貨數量}
+                onChange={(e) => setForm((f) => ({ ...f, 總進貨數量: e.target.value }))}
+                onKeyDown={(e) => handleEnterTab(e, () => dateRefs.current['製造日期']?.focus())}
+              />
+              {errors.總進貨數量 && <small style={styles.errText}>{errors.總進貨數量}</small>}
+            </div>
+
+            <div style={styles.field}>
+              <label style={styles.label}>總箱數</label>
+              <input style={{ ...readonlyInput, fontWeight: 600 }} value={總箱數} readOnly tabIndex={-1} />
+              <small style={{ color: '#9ca3af', marginTop: 3, fontSize: 12 }}>
+                系統計算（總進貨數量 ÷ 單箱數量）
+              </small>
+            </div>
+          </div>
+
+          {/* Row 4: 製造日期 + 有效日期 + 保存期限 */}
+          <div style={styles.grid3}>
+            {(['製造日期', '有效日期', '保存期限'] as const).map((field, idx, arr) => (
+              <div key={field} style={styles.field}>
+                <label style={styles.label}>{field}</label>
+                <input
+                  ref={(el) => { dateRefs.current[field] = el; }}
+                  style={errors[field] ? { ...styles.input, borderColor: '#e74c3c' } : styles.input}
+                  value={form[field]}
+                  maxLength={8}
+                  placeholder="yyyymmdd"
+                  onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
+                  onKeyDown={(e) => {
+                    const next = arr[idx + 1];
+                    if (next) handleEnterTab(e, () => dateRefs.current[next]?.focus());
+                  }}
+                />
+                {errors[field] && <small style={styles.errText}>{errors[field]}</small>}
+              </div>
+            ))}
+          </div>
 
           {submitMsg && (
-            <div style={{ color: submitMsg.startsWith('✓') ? 'green' : '#e74c3c', marginBottom: 8 }}>
+            <div style={{
+              color: submitMsg.startsWith('✓') ? '#16a34a' : '#e74c3c',
+              fontSize: 13, marginBottom: 10,
+            }}>
               {submitMsg}
             </div>
           )}
 
+          {/* 按鈕列 */}
           <div style={styles.btnRow}>
             <button style={styles.printBtn} onClick={handlePrint}>列印</button>
             <button style={styles.resetBtn} onClick={handleReset}>清除</button>
           </div>
+
         </div>
       </div>
     </>
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 14 }}>
-      <label style={{ fontWeight: 500, fontSize: 14 }}>{label}</label>
-      {children}
-    </div>
-  );
-}
-
-function Err({ msg }: { msg: string }) {
-  return <small style={{ color: '#e74c3c' }}>{msg}</small>;
-}
-
 const styles: Record<string, React.CSSProperties> = {
   page: { padding: '32px 24px' },
-  title: { color: '#1a5276', marginBottom: 24 },
+  title: {
+    color: '#1a3a5c',
+    fontSize: 26,
+    fontWeight: 700,
+    marginBottom: 24,
+    letterSpacing: '0.5px',
+  },
   card: {
-    background: '#fff', padding: '28px 32px', borderRadius: 8,
-    boxShadow: '0 2px 10px rgba(0,0,0,0.08)', maxWidth: 520,
+    background: '#fff',
+    padding: '32px 36px',
+    borderRadius: 12,
+    boxShadow: '0 2px 16px rgba(0,0,0,0.09)',
+    maxWidth: 760,
+  },
+  grid2: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '0 24px',
+    marginBottom: 4,
+  },
+  grid3: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr 1fr',
+    gap: '0 20px',
+    marginBottom: 4,
+  },
+  field: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 0,
+    marginBottom: 18,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: 500,
+    color: '#374151',
+    marginBottom: 6,
   },
   input: {
-    padding: '8px 10px', border: '1px solid #ccc', borderRadius: 4,
-    fontSize: 15, outline: 'none', width: '100%', boxSizing: 'border-box',
+    padding: '10px 12px',
+    border: '1.5px solid #d1d5db',
+    borderRadius: 6,
+    fontSize: 14,
+    outline: 'none',
+    width: '100%',
+    boxSizing: 'border-box' as const,
+    color: '#111827',
+    transition: 'border-color 0.15s',
   },
-  btnRow: { display: 'flex', gap: 12, marginTop: 8 },
+  errText: {
+    color: '#e74c3c',
+    fontSize: 12,
+    marginTop: 3,
+  },
+  btnRow: {
+    display: 'flex',
+    gap: 12,
+    marginTop: 8,
+  },
   printBtn: {
-    flex: 1, padding: '10px 0', background: '#1a5276', color: '#fff',
-    border: 'none', borderRadius: 4, fontSize: 15, cursor: 'pointer',
+    flex: 1,
+    padding: '12px 0',
+    background: '#1a3a5c',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 6,
+    fontSize: 16,
+    fontWeight: 600,
+    cursor: 'pointer',
+    letterSpacing: '2px',
   },
   resetBtn: {
-    padding: '10px 20px', background: '#ecf0f1', color: '#333',
-    border: '1px solid #ccc', borderRadius: 4, fontSize: 15, cursor: 'pointer',
+    padding: '12px 28px',
+    background: '#ecf0f1',
+    color: '#374151',
+    border: '1px solid #d1d5db',
+    borderRadius: 6,
+    fontSize: 15,
+    fontWeight: 500,
+    cursor: 'pointer',
   },
 };
 
@@ -398,13 +457,8 @@ const PRINT_CSS = `
       vertical-align: middle;
     }
 
-    .label-remark-line {
-      margin-bottom: 2mm;
-    }
-
-    .label-qty {
-      font-size: 12pt;
-    }
+    .label-remark-line { margin-bottom: 2mm; }
+    .label-qty { font-size: 12pt; }
 
     .label-scatter {
       font-size: 10pt;
@@ -413,9 +467,7 @@ const PRINT_CSS = `
       margin-top: 1mm;
     }
 
-    .label-cell-dates {
-      padding: 3mm 4mm;
-    }
+    .label-cell-dates { padding: 3mm 4mm; }
 
     .label-cell-hint {
       border: 1.5px solid #000;
@@ -424,13 +476,8 @@ const PRINT_CSS = `
       font-size: 8.5pt;
     }
 
-    .label-field-name {
-      font-weight: bold;
-    }
-
-    .label-value {
-      margin-left: 2px;
-    }
+    .label-field-name { font-weight: bold; }
+    .label-value { margin-left: 2px; }
 
     .label-dates-row {
       display: flex;

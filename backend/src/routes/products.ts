@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { MultipartFile } from '@fastify/multipart';
 import ExcelJS from 'exceljs';
-import pool from '../db/pool';
+import { sql, pool, poolConnect } from '../db/pool';
 import { authMiddleware, JwtPayload } from '../middleware/auth';
 
 export default async function productRoutes(app: FastifyInstance) {
@@ -12,14 +12,15 @@ export default async function productRoutes(app: FastifyInstance) {
     { preHandler: authMiddleware },
     async (request, reply) => {
       const { 品號 } = request.params;
-      const result = await pool.query(
-        'SELECT 品號, 對照號, 品名, 單箱數量 FROM products WHERE 品號 = $1',
-        [品號]
-      );
-      if (result.rowCount === 0) {
+      await poolConnect;
+      const result = await pool.request()
+        .input('品號', sql.NVarChar(50), 品號)
+        .query('SELECT 品號, 對照號, 品名, 單箱數量 FROM products WHERE 品號 = @品號');
+
+      if (!result.recordset || result.recordset.length === 0) {
         return reply.status(404).send({ error: '查無此品號' });
       }
-      return reply.send(result.rows[0]);
+      return reply.send(result.recordset[0]);
     }
   );
 
@@ -55,6 +56,8 @@ export default async function productRoutes(app: FastifyInstance) {
       let failed = 0;
       const errors: string[] = [];
 
+      await poolConnect;
+
       for (const row of rows) {
         if (!row.品號 || !row.品名) {
           failed++;
@@ -62,16 +65,25 @@ export default async function productRoutes(app: FastifyInstance) {
           continue;
         }
         try {
-          await pool.query(
-            `INSERT INTO products (品號, 對照號, 品名, 單箱數量, updated_by)
-             VALUES ($1, $2, $3, $4, $5)
-             ON CONFLICT (品號) DO UPDATE SET
-               對照號    = EXCLUDED.對照號,
-               品名      = EXCLUDED.品名,
-               單箱數量  = EXCLUDED.單箱數量,
-               updated_by = EXCLUDED.updated_by`,
-            [row.品號, row.對照號 || null, row.品名, row.單箱數量, user.username]
-          );
+          await pool.request()
+            .input('品號',     sql.NVarChar(50),  row.品號)
+            .input('對照號',   sql.NVarChar(50),  row.對照號 || null)
+            .input('品名',     sql.NVarChar(200), row.品名)
+            .input('單箱數量', sql.Int,           row.單箱數量)
+            .input('updated_by', sql.NVarChar(50), user.username)
+            .query(`
+              MERGE INTO products WITH (HOLDLOCK) AS target
+              USING (VALUES (@品號)) AS source(品號) ON target.品號 = source.品號
+              WHEN MATCHED THEN
+                UPDATE SET
+                  對照號    = @對照號,
+                  品名      = @品名,
+                  單箱數量  = @單箱數量,
+                  updated_by = @updated_by
+              WHEN NOT MATCHED THEN
+                INSERT (品號, 對照號, 品名, 單箱數量, updated_by)
+                VALUES (@品號, @對照號, @品名, @單箱數量, @updated_by);
+            `);
           success++;
         } catch (err) {
           failed++;

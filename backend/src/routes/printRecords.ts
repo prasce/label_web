@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import pool from '../db/pool';
+import { sql, pool, poolConnect } from '../db/pool';
 import { authMiddleware, JwtPayload } from '../middleware/auth';
 
 export default async function printRecordRoutes(app: FastifyInstance) {
@@ -18,10 +18,13 @@ export default async function printRecordRoutes(app: FastifyInstance) {
         return reply.status(400).send({ error: '品號與列印數量為必填' });
       }
 
-      await pool.query(
-        'INSERT INTO print_records (品號, 品名, 列印數量, username) VALUES ($1, $2, $3, $4)',
-        [品號, 品名 || null, 列印數量, user.username]
-      );
+      await poolConnect;
+      await pool.request()
+        .input('品號',     sql.NVarChar(50),  品號)
+        .input('品名',     sql.NVarChar(200), 品名 || null)
+        .input('列印數量', sql.Int,           列印數量)
+        .input('username', sql.NVarChar(50),  user.username)
+        .query('INSERT INTO print_records (品號, 品名, 列印數量, username) VALUES (@品號, @品名, @列印數量, @username)');
 
       return reply.status(201).send({ message: '列印記錄已儲存' });
     }
@@ -32,13 +35,14 @@ export default async function printRecordRoutes(app: FastifyInstance) {
     '/',
     { preHandler: authMiddleware },
     async (_request, reply) => {
-      const result = await pool.query(
-        `SELECT id, 品號, 品名, 列印數量, createtime, username
-         FROM print_records
-         ORDER BY createtime DESC
-         LIMIT 500`
-      );
-      return reply.send(result.rows);
+      await poolConnect;
+      const result = await pool.request()
+        .query(`
+          SELECT TOP 500 id, 品號, 品名, 列印數量, createtime, username
+          FROM print_records
+          ORDER BY createtime DESC
+        `);
+      return reply.send(result.recordset);
     }
   );
 }

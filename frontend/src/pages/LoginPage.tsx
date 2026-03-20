@@ -1,6 +1,6 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../api/auth';
+import { login, register } from '../api/auth';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -11,6 +11,15 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // 註冊彈窗狀態
+  const [showRegister, setShowRegister] = useState(false);
+  const [regUsername, setRegUsername] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirm, setRegConfirm] = useState('');
+  const [regError, setRegError] = useState('');
+  const [regSuccess, setRegSuccess] = useState('');
+  const [regLoading, setRegLoading] = useState(false);
+
   useEffect(() => {
     const savedUser = localStorage.getItem('saved_username') || '';
     const savedPass = localStorage.getItem('saved_password') || '';
@@ -18,7 +27,7 @@ export default function LoginPage() {
     if (savedPass) { setPassword(savedPass); setRememberPass(true); }
   }, []);
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -38,21 +47,55 @@ export default function LoginPage() {
     }
   }
 
+  function openRegister() {
+    setRegUsername('');
+    setRegPassword('');
+    setRegConfirm('');
+    setRegError('');
+    setRegSuccess('');
+    setShowRegister(true);
+  }
+
+  function closeRegister() {
+    setShowRegister(false);
+  }
+
+  async function handleRegister(e: React.SyntheticEvent) {
+    e.preventDefault();
+    setRegError('');
+    setRegSuccess('');
+    if (regPassword !== regConfirm) {
+      setRegError('兩次密碼輸入不一致');
+      return;
+    }
+    setRegLoading(true);
+    try {
+      await register(regUsername, regPassword);
+      setRegSuccess('註冊成功！請使用新帳號登入。');
+      setTimeout(() => {
+        setShowRegister(false);
+        setUsername(regUsername);
+        setPassword('');
+      }, 1500);
+    } catch (err: any) {
+      setRegError(err.response?.data?.error || '註冊失敗，請稍後再試');
+    } finally {
+      setRegLoading(false);
+    }
+  }
+
   return (
     <div style={s.page}>
       {/* ── 左側漸層面板 ── */}
       <div style={s.left}>
-        {/* Logo */}
         <div style={s.logo}>
           <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
             <path d="M4 28 L16 4 L28 28 Z" fill="rgba(255,255,255,0.9)" />
             <path d="M10 28 L16 16 L22 28 Z" fill="rgba(255,255,255,0.5)" />
           </svg>
         </div>
-        {/* 裝飾泡泡 */}
         <div style={s.bubble1} />
         <div style={s.bubble2} />
-        {/* 歡迎文字 */}
         <div style={s.welcome}>
           <span style={s.welcomeText}>Welcome</span>
           <span style={s.welcomeText}>Back!</span>
@@ -100,6 +143,10 @@ export default function LoginPage() {
               />
               <span style={s.checkLabel}>Remember Me</span>
             </label>
+
+            <button type="button" style={s.registerLink} onClick={openRegister}>
+              Register
+            </button>
           </div>
 
           <button type="submit" style={s.btn} disabled={loading}>
@@ -107,6 +154,75 @@ export default function LoginPage() {
           </button>
         </form>
       </div>
+
+      {/* ── 註冊彈窗 ── */}
+      {showRegister && (
+        <div style={s.overlay} onClick={closeRegister}>
+          <div style={s.modal} onClick={(e) => e.stopPropagation()}>
+            {/* 標題列 */}
+            <div style={s.modalHeader}>
+              <h3 style={s.modalTitle}>建立帳號</h3>
+              <button type="button" style={s.closeBtn} onClick={closeRegister}>✕</button>
+            </div>
+
+            {regError   && <div style={s.error}>{regError}</div>}
+            {regSuccess && <div style={s.success}>{regSuccess}</div>}
+
+            <form onSubmit={handleRegister} style={s.modalForm}>
+              <div style={s.field}>
+                <label style={s.fieldLabel}>帳號</label>
+                <input
+                  style={s.fieldInput}
+                  value={regUsername}
+                  onChange={(e) => setRegUsername(e.target.value)}
+                  placeholder="請輸入帳號"
+                  autoFocus
+                  required
+                />
+              </div>
+
+              <div style={s.field}>
+                <label style={s.fieldLabel}>密碼 <span style={s.hint}>(至少 6 字元)</span></label>
+                <input
+                  style={s.fieldInput}
+                  type="password"
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  placeholder="請輸入密碼"
+                  required
+                />
+              </div>
+
+              <div style={s.field}>
+                <label style={s.fieldLabel}>確認密碼</label>
+                <input
+                  style={{
+                    ...s.fieldInput,
+                    borderColor: regConfirm && regConfirm !== regPassword ? '#ef4444' : undefined,
+                  }}
+                  type="password"
+                  value={regConfirm}
+                  onChange={(e) => setRegConfirm(e.target.value)}
+                  placeholder="再次輸入密碼"
+                  required
+                />
+                {regConfirm && regConfirm !== regPassword && (
+                  <span style={s.fieldError}>密碼不一致</span>
+                )}
+              </div>
+
+              <div style={s.modalBtns}>
+                <button type="button" style={s.cancelBtn} onClick={closeRegister}>
+                  取消
+                </button>
+                <button type="submit" style={s.submitBtn} disabled={regLoading}>
+                  {regLoading ? '處理中...' : '確認註冊'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -208,6 +324,13 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: 8,
     fontSize: 13,
   },
+  success: {
+    background: '#f0fdf4',
+    color: '#16a34a',
+    padding: '8px 12px',
+    borderRadius: 8,
+    fontSize: 13,
+  },
   label: {
     fontSize: 13,
     color: '#6b7280',
@@ -245,8 +368,126 @@ const s: Record<string, React.CSSProperties> = {
     color: '#6b7280',
     userSelect: 'none',
   },
+  registerLink: {
+    background: 'none',
+    border: 'none',
+    color: PURPLE,
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+    padding: 0,
+    textDecoration: 'underline',
+  },
   btn: {
     marginTop: 16,
+    padding: '12px 0',
+    background: PURPLE,
+    color: '#fff',
+    border: 'none',
+    borderRadius: 8,
+    fontSize: 15,
+    fontWeight: 600,
+    cursor: 'pointer',
+    letterSpacing: '0.5px',
+    width: '100%',
+  },
+
+  /* 彈窗 */
+  overlay: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0,0,0,0.45)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100,
+  },
+  modal: {
+    background: '#fff',
+    borderRadius: 16,
+    padding: '28px 32px 32px',
+    width: 420,
+    boxShadow: '0 8px 40px rgba(0,0,0,0.22)',
+  },
+  modalHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    margin: 0,
+    fontSize: 22,
+    fontWeight: 700,
+    color: '#1a1a2e',
+  },
+  closeBtn: {
+    background: 'none',
+    border: 'none',
+    fontSize: 18,
+    color: '#9ca3af',
+    cursor: 'pointer',
+    lineHeight: 1,
+    padding: '2px 6px',
+    borderRadius: 6,
+  },
+  modalForm: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 0,
+  },
+  field: {
+    display: 'flex',
+    flexDirection: 'column',
+    marginBottom: 16,
+  },
+  fieldLabel: {
+    display: 'block',
+    fontSize: 13,
+    fontWeight: 600,
+    color: '#374151',
+    marginBottom: 6,
+  },
+  hint: {
+    fontWeight: 400,
+    color: '#9ca3af',
+    fontSize: 12,
+  },
+  fieldInput: {
+    display: 'block',
+    width: '100%',
+    boxSizing: 'border-box' as const,
+    padding: '11px 14px',
+    border: '1.5px solid #e5e7eb',
+    borderRadius: 8,
+    fontSize: 14,
+    outline: 'none',
+    color: '#111827',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
+  },
+  fieldError: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#ef4444',
+  },
+  modalBtns: {
+    display: 'flex',
+    gap: 10,
+    marginTop: 8,
+  },
+  cancelBtn: {
+    flex: 1,
+    padding: '12px 0',
+    background: '#f3f4f6',
+    color: '#374151',
+    border: 'none',
+    borderRadius: 8,
+    fontSize: 15,
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  submitBtn: {
+    flex: 2,
     padding: '12px 0',
     background: PURPLE,
     color: '#fff',
